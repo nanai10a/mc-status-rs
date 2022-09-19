@@ -99,22 +99,24 @@ fn mcping() -> Result<Response, Error> {
     stream.write_all(pending.get_ref()).unwrap();
     stream.flush().unwrap();
 
-    // FIXME: read as VarInt for "Length"
-    let data = &mut [0; 2];
-    stream.read_exact(data).unwrap();
-    assert_eq!(*data, *convert_i32_to_varint(15961));
+    // read as VarInt for "Length"
+    let data = convert_varint_to_i32(&mut stream);
+    eprintln!("receiving {data} bytes...");
 
     // read "0x00" as VarInt for "Packet ID"
-    let data = &mut [0; 1];
-    stream.read_exact(data).unwrap();
-    assert_eq!(*data, [0b0000_0000]);
+    let data = convert_varint_to_i32(&mut stream);
+    assert_eq!(data, 0b0000_0000);
 
-    // FIXME: read as VarInt for "JSON Response"'s String length
-    stream.read_exact(&mut [0; 2]).unwrap();
+    // read as VarInt for "JSON Response"'s String length
+    let len = convert_varint_to_i32(&mut stream);
 
-    let mut data = Vec::with_capacity(32767);
-    stream.read_to_end(&mut data).unwrap();
+    // read as String for "JSON Response"
+    let mut data = Vec::new();
+    data.resize(len as usize, 0);
+    stream.read_exact(&mut data).unwrap();
     let data = core::str::from_utf8(&data).unwrap();
+
+    // print "JSON Response"
     println!("{data}");
 
     stream.shutdown(std::net::Shutdown::Both).unwrap();
