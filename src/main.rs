@@ -23,11 +23,15 @@ fn convert_i32_to_varint(mut n: i32) -> Vec<u8> {
     varint
 }
 
-fn convert_varint_to_i32(n: Vec<u8>) -> i32 {
+fn convert_varint_to_i32(r: &mut impl std::io::Read) -> i32 {
     let mut i32 = 0;
 
-    for (i, f) in n.into_iter().enumerate() {
+    for i in 0.. {
         assert!(i < 5);
+
+        let mut arr = [0; 1];
+        r.read_exact(&mut arr).unwrap();
+        let [f] = arr;
 
         if f & 0x80 == 0 {
             i32 |= (f as i32) << (i * 7);
