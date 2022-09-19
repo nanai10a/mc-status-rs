@@ -79,11 +79,11 @@ fn mcping() -> Result<Response, Error> {
     pending.write_all(&data).unwrap();
 
     // send
-    let len = dbg!(pending.stream_len().unwrap());
+    let len = pending.stream_len().unwrap();
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
-    dbg!(stream.flush().unwrap());
+    stream.flush().unwrap();
 
     // make buffer
     let mut pending = std::io::Cursor::new(Vec::new());
@@ -93,23 +93,21 @@ fn mcping() -> Result<Response, Error> {
     pending.write_all(&data).unwrap();
 
     // send
-    let len = dbg!(pending.stream_len().unwrap());
+    let len = pending.stream_len().unwrap();
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
-    dbg!(stream.flush().unwrap());
+    stream.flush().unwrap();
 
     // FIXME: read as VarInt for "Length"
     let data = &mut [0; 2];
     stream.read_exact(data).unwrap();
     assert_eq!(*data, *convert_i32_to_varint(15961));
-    dbg!(data);
 
     // read "0x00" as VarInt for "Packet ID"
     let data = &mut [0; 1];
     stream.read_exact(data).unwrap();
     assert_eq!(*data, [0b0000_0000]);
-    dbg!(data);
 
     // FIXME: read as VarInt for "JSON Response"'s String length
     stream.read_exact(&mut [0; 2]).unwrap();
