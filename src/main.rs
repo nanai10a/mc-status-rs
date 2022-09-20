@@ -248,7 +248,6 @@ impl<'de> Visitor<'de> for FaviconVisitor {
         let url = url::Url::parse(v).unwrap();
 
         assert_eq!(url.scheme(), "data");
-        assert!(!url.has_host());
         assert_eq!(url.query(), None);
         assert_eq!(url.fragment(), None);
 
