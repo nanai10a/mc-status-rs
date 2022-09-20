@@ -1,8 +1,13 @@
 #![feature(seek_stream_len)]
 
 fn main() {
-    let result = mcping("mc.hypixel.net");
-    dbg!(&result);
+    let mut res = mcping("mc.hypixel.net").unwrap();
+
+    // since it is hard to see, rewrite to vec indicating length
+    res.favicon
+        .as_mut()
+        .map(|v| v.image = v.image.len().to_be_bytes().to_vec());
+    dbg!(&res);
 }
 
 fn convert_i32_to_varint(mut n: i32) -> Vec<u8> {
