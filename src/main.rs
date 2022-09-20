@@ -1,7 +1,7 @@
 #![feature(seek_stream_len)]
 
 fn main() {
-    let result = mcping();
+    let result = mcping("mc.hypixel.net");
     dbg!(&result);
 }
 
@@ -44,10 +44,29 @@ fn convert_varint_to_i32(r: &mut impl std::io::Read) -> i32 {
     i32
 }
 
-fn mcping() -> Result<Response, Error> {
-    let address = std::net::SocketAddr::from(([172, 65, 195, 110], 25565));
+fn resolve_address(str: &str) -> std::net::SocketAddr {
+    let (host, port) = if let Some((before, after)) = str.split_once(':') {
+        (before, after.parse().unwrap())
+    } else {
+        (str, 25565)
+    };
 
-    let mut stream = std::net::TcpStream::connect(address).unwrap();
+    let ip = if let Ok(ip) = host.parse() {
+        ip
+    } else {
+        let config = trust_dns_resolver::config::ResolverConfig::cloudflare_tls();
+        let options = trust_dns_resolver::config::ResolverOpts::default();
+
+        let resolver = trust_dns_resolver::Resolver::new(config, options).unwrap();
+        resolver.lookup_ip(str).unwrap().iter().next().unwrap()
+    };
+
+    (ip, port).into()
+}
+
+fn mcping(target: &str) -> Result<Response, Error> {
+    let addr = resolve_address(target);
+    let mut stream = std::net::TcpStream::connect(addr).unwrap();
 
     use std::io::{Read, Seek, Write};
 
