@@ -135,12 +135,13 @@ fn mcping(target: &str) -> Result<Response, Error> {
     stream.read_exact(&mut data).unwrap();
     let data = core::str::from_utf8(&data).unwrap();
 
-    // print "JSON Response"
-    println!("{data}");
+    eprintln!("received: {data}");
+
+    let data = serde_json::from_str::<'_, Response>(data).unwrap();
 
     stream.shutdown(std::net::Shutdown::Both).unwrap();
 
-    unimplemented!();
+    Ok(data)
 }
 
 #[derive(Debug)]
