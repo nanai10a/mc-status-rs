@@ -219,6 +219,46 @@ struct Favicon {
     image: Vec<u8>,
 }
 
+use serde::de::Visitor;
+use serde::{Deserializer, Serializer};
+
+impl<'de> Deserialize<'de> for Favicon {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: Deserializer<'de> {
+        deserializer.deserialize_string(FaviconVisitor)
+    }
+}
+
+struct FaviconVisitor;
+
+impl<'de> Visitor<'de> for FaviconVisitor {
+    type Value = Favicon;
+
+    fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+        formatter.write_str("favicon must be a string (data url)")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where E: std::error::Error {
+        let url = url::Url::parse(v).unwrap();
+
+        assert_eq!(url.scheme(), "data");
+        assert_eq!(url.has_host(), false);
+        assert_eq!(url.query(), None);
+        assert_eq!(url.fragment(), None);
+
+        let path = url.path();
+        let (before, after) = path.rsplit_once(',').unwrap();
+        let (before_before, before_after) = before.rsplit_once(';').unwrap();
+        assert_eq!(before_after, "base64");
+
+        let mime = before_before.parse().unwrap();
+        let image = base64::decode(after).unwrap();
+
+        Ok(Self::Value { mime, image })
+    }
+}
+
 #[derive(Debug)]
 enum Error {}
 
