@@ -144,8 +144,48 @@ fn mcping(target: &str) -> Result<Response, Error> {
     Ok(data)
 }
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Response {
+    version: Version,
+    players: Players,
+    description: Chat,
+    favicon: Option<String>, // FIXME: replace `String` to `Favicon`
+    previews_chat: Option<bool>,
+    enforces_secure_chat: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Version {
+    name: String,
+    protocol: u16,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Players {
+    max: u32,
+    online: u32,
+    sample: Option<Vec<User>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct User {
+    name: String,
+    id: uuid::Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+enum Chat {
+    String(String),
+}
+
 #[derive(Debug)]
-struct Response {}
+struct Favicon {
+    mime: mime::Mime,
+    image: Vec<u8>,
+}
 
 #[derive(Debug)]
 enum Error {}
