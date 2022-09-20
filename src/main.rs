@@ -44,6 +44,42 @@ fn convert_varint_to_i32(r: &mut impl std::io::Read) -> i32 {
     i32
 }
 
+fn resolve_domain(host: &str) -> std::net::IpAddr {
+    #[rustfmt::skip]
+    // want to use https://adguard-dns.io/en/public-dns.html (DoQ) but gave up
+    // see https://github.com/bluejekyll/trust-dns/issues/1687
+    //
+    // let ns_configs = [
+    //     "94.140.14.14",
+    //     "94.140.15.15",
+    //     "2a10:50c0::ad1:ff",
+    //     "2a10:50c0::ad2:ff",
+    // ]
+    // .into_iter()
+    // .map(core::str::FromStr::from_str)
+    // .map(Result::unwrap)
+    // .map(
+    //     |addr: std::net::IpAddr| trust_dns_resolver::config::NameServerConfig {
+    //         socket_addr: (addr, 784).into(),
+    //         protocol: trust_dns_resolver::config::Protocol::Quic,
+    //         tls_dns_name: Some("dns.adguard-dns.com".to_string()),
+    //         trust_nx_responses: true,
+    //         tls_config: None,
+    //         bind_addr: None,
+    //     },
+    // )
+    // .collect::<Vec<_>>();
+    // let config =
+    //     trust_dns_resolver::config::ResolverConfig::from_parts(None, Vec::new(), ns_configs);
+
+    let config = trust_dns_resolver::config::ResolverConfig::cloudflare_tls();
+    let mut options = trust_dns_resolver::config::ResolverOpts::default();
+    options.validate = true;
+
+    let resolver = trust_dns_resolver::Resolver::new(config, options).unwrap();
+    resolver.lookup_ip(host).unwrap().iter().next().unwrap()
+}
+
 fn resolve_address(str: &str) -> std::net::SocketAddr {
     let (host, port) = if let Some((before, after)) = str.split_once(':') {
         (before, after.parse().unwrap())
@@ -54,11 +90,7 @@ fn resolve_address(str: &str) -> std::net::SocketAddr {
     let ip = if let Ok(ip) = host.parse() {
         ip
     } else {
-        let config = trust_dns_resolver::config::ResolverConfig::cloudflare_tls();
-        let options = trust_dns_resolver::config::ResolverOpts::default();
-
-        let resolver = trust_dns_resolver::Resolver::new(config, options).unwrap();
-        resolver.lookup_ip(str).unwrap().iter().next().unwrap()
+        resolve_domain(str)
     };
 
     (ip, port).into()
