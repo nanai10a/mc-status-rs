@@ -176,7 +176,7 @@ fn mcping(target: &str) -> Result<Response, Error> {
     Ok(data)
 }
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct Response {
@@ -188,26 +188,26 @@ struct Response {
     enforces_secure_chat: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Version {
     name: String,
     protocol: u16,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Players {
     max: u32,
     online: u32,
     sample: Option<Vec<User>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct User {
     name: String,
     id: uuid::Uuid,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum Chat {
     String(String),
@@ -220,7 +220,7 @@ struct Favicon {
 }
 
 use serde::de::Visitor;
-use serde::{Deserializer, Serializer};
+use serde::Deserializer;
 
 impl<'de> Deserialize<'de> for Favicon {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
