@@ -104,6 +104,7 @@ fn resolve_address(str: &str) -> std::net::SocketAddr {
 fn mcping(target: &str) -> Result<Response, Error> {
     let addr = resolve_address(target);
     let mut stream = std::net::TcpStream::connect(addr).unwrap();
+    stream.set_nodelay(true).unwrap();
 
     use std::io::{Read, Seek, Write};
 
@@ -139,7 +140,6 @@ fn mcping(target: &str) -> Result<Response, Error> {
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
-    stream.flush().unwrap();
 
     // make buffer
     let mut pending = std::io::Cursor::new(Vec::new());
@@ -153,7 +153,6 @@ fn mcping(target: &str) -> Result<Response, Error> {
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
-    stream.flush().unwrap();
 
     // read as VarInt for "Length"
     let data = convert_varint_to_i32(&mut stream);
@@ -193,7 +192,7 @@ fn mcping(target: &str) -> Result<Response, Error> {
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
-    stream.flush().unwrap();
+    let sent_time = std::time::Instant::now();
 
     // read as VarInt for "Length"
     let data = convert_varint_to_i32(&mut stream);
@@ -208,6 +207,7 @@ fn mcping(target: &str) -> Result<Response, Error> {
     stream.read_exact(&mut data).unwrap();
     let data = i64::from_be_bytes(data);
     assert_eq!(data, payload);
+    eprintln!("pong ({} ms)", sent_time.elapsed().as_millis());
 
     stream.shutdown(std::net::Shutdown::Both).unwrap();
 
