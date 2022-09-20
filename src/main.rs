@@ -178,12 +178,12 @@ fn mcping(target: &str) -> Result<Response, Error> {
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Response {
     version: Version,
     players: Players,
     description: Chat,
-    favicon: Option<String>, // FIXME: replace `String` to `Favicon`
+    favicon: Option<Favicon>,
     previews_chat: Option<bool>,
     enforces_secure_chat: Option<bool>,
 }
