@@ -4,9 +4,9 @@ fn main() {
     let mut res = mcping("mc.hypixel.net").unwrap();
 
     // since it is hard to see, rewrite to vec indicating length
-    res.favicon
-        .as_mut()
-        .map(|v| v.image = v.image.len().to_be_bytes().to_vec());
+    if let Some(favicon) = res.favicon.as_mut() {
+        favicon.image = favicon.image.len().to_be_bytes().to_vec();
+    }
     dbg!(&res);
 }
 
