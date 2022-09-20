@@ -174,11 +174,44 @@ fn mcping(target: &str) -> Result<Response, Error> {
 
     eprintln!("received: {data}");
 
-    let data = serde_json::from_str::<'_, Response>(data).unwrap();
+    let res = serde_json::from_str::<'_, Response>(data).unwrap();
+
+    // make buffer
+    let mut pending = std::io::Cursor::new(Vec::new());
+
+    // write VarInt for "Packet ID"
+    let data = convert_i32_to_varint(0x01);
+    pending.write_all(&data).unwrap();
+
+    // write Long for "Payload"
+    let payload = 771;
+    let data = i64::to_be_bytes(payload);
+    pending.write_all(&data).unwrap();
+
+    // send
+    let len = pending.stream_len().unwrap();
+    let len = convert_i32_to_varint(len as i32);
+    stream.write_all(&len).unwrap();
+    stream.write_all(pending.get_ref()).unwrap();
+    stream.flush().unwrap();
+
+    // read as VarInt for "Length"
+    let data = convert_varint_to_i32(&mut stream);
+    eprintln!("receiving {data} bytes...");
+
+    // read "0x01" as VarInt for "Packet ID"
+    let data = convert_varint_to_i32(&mut stream);
+    assert_eq!(data, 0b0000_0001);
+
+    // read as Long for "Payload"
+    let mut data = [0; 8];
+    stream.read_exact(&mut data).unwrap();
+    let data = i64::from_be_bytes(data);
+    assert_eq!(data, payload);
 
     stream.shutdown(std::net::Shutdown::Both).unwrap();
 
-    Ok(data)
+    Ok(res)
 }
 
 use serde::Deserialize;
