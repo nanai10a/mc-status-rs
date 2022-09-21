@@ -262,7 +262,9 @@ struct Response {
     players: Players,
     description: Chat,
     favicon: Option<Favicon>,
+    #[serde(rename = "previewsChat")]
     previews_chat: Option<bool>,
+    #[serde(rename = "enforcesSercureChat")]
     enforces_secure_chat: Option<bool>,
 }
 
