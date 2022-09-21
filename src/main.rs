@@ -156,7 +156,7 @@ fn mcping(target: &str) -> Result<Response, Error> {
     pending.write_all(&data).unwrap();
 
     // write VarInt for "Protocol Version"
-    let data = convert_i32_to_varint(760);
+    let data = convert_i32_to_varint(-1);
     pending.write_all(&data).unwrap();
 
     // write as VarInt for "Server Address"'s String length
