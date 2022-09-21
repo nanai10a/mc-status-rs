@@ -288,8 +288,8 @@ struct User {
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum Chat {
-    String(String),
-    Struct {
+    Old(String),
+    New {
         extra: Option<Vec<Wtf>>,
         text: String,
     },
