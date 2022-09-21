@@ -249,12 +249,22 @@ struct User {
 #[serde(untagged)]
 enum Chat {
     String(String),
+    Struct {
+        extra: Option<Vec<Wtf>>,
+        text: String,
+    },
 }
 
 #[derive(Debug)]
 struct Favicon {
     mime: mime::Mime,
     image: Vec<u8>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Wtf {
+    color: Option<String>,
+    text: String,
 }
 
 use serde::de::Visitor;
