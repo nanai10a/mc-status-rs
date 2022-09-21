@@ -236,7 +236,7 @@ struct Version {
 struct Players {
     max: u32,
     online: u32,
-    sample: Option<Vec<User>>,
+    sample: Vec<User>,
 }
 
 #[derive(Debug, Deserialize)]
