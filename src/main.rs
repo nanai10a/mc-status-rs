@@ -266,6 +266,8 @@ struct Response {
     previews_chat: Option<bool>,
     #[serde(rename = "enforcesSercureChat")]
     enforces_secure_chat: Option<bool>,
+    #[serde(rename = "modinfo")]
+    mod_info: Option<ModInfo>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -301,6 +303,14 @@ enum Chat {
 struct Wtf {
     color: Option<String>,
     text: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ModInfo {
+    #[serde(rename = "type")]
+    ty: String,
+    #[serde(rename = "modList")]
+    mod_list: Vec<String>, // FIXME: unknown element
 }
 
 #[derive(Debug)]
