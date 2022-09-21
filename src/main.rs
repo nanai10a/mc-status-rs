@@ -5,7 +5,7 @@ fn main() {
 
     // since it is hard to see, rewrite to vec indicating length
     if let Some(favicon) = res.favicon.as_mut() {
-        favicon.image = favicon.image.len().to_be_bytes().to_vec();
+        favicon.0 = favicon.0.len().to_be_bytes().to_vec();
     }
     dbg!(&res);
 }
@@ -255,17 +255,14 @@ enum Chat {
     },
 }
 
-#[derive(Debug)]
-struct Favicon {
-    mime: mime::Mime,
-    image: Vec<u8>,
-}
-
 #[derive(Debug, Deserialize)]
 struct Wtf {
     color: Option<String>,
     text: String,
 }
+
+#[derive(Debug)]
+struct Favicon(Vec<u8>);
 
 use serde::de::Visitor;
 use serde::Deserializer;
@@ -299,10 +296,12 @@ impl<'de> Visitor<'de> for FaviconVisitor {
         let (before_before, before_after) = before.rsplit_once(';').unwrap();
         assert_eq!(before_after, "base64");
 
-        let mime = before_before.parse().unwrap();
+        let mime = before_before.parse::<mime::Mime>().unwrap();
+        assert_eq!(mime, mime::IMAGE_PNG);
+
         let image = base64::decode(after).unwrap();
 
-        Ok(Self::Value { mime, image })
+        Ok(Favicon(image))
     }
 }
 
