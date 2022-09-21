@@ -1,5 +1,3 @@
-#![feature(seek_stream_len)]
-
 fn main() {
     let arg = std::env::args().nth(1).unwrap();
     let mut res = mcping(&arg).unwrap();
@@ -176,7 +174,7 @@ fn mcping(target: &str) -> Result<Response, Error> {
     pending.write_all(&data).unwrap();
 
     // send
-    let len = pending.stream_len().unwrap();
+    let len = pending.get_ref().len();
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
@@ -189,7 +187,7 @@ fn mcping(target: &str) -> Result<Response, Error> {
     pending.write_all(&data).unwrap();
 
     // send
-    let len = pending.stream_len().unwrap();
+    let len = pending.get_ref().len();
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
@@ -228,7 +226,7 @@ fn mcping(target: &str) -> Result<Response, Error> {
     pending.write_all(&data).unwrap();
 
     // send
-    let len = pending.stream_len().unwrap();
+    let len = pending.get_ref().len();
     let len = convert_i32_to_varint(len as i32);
     stream.write_all(&len).unwrap();
     stream.write_all(pending.get_ref()).unwrap();
