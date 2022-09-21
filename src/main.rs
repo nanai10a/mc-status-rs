@@ -29,6 +29,24 @@ fn convert_i32_to_varint(mut n: i32) -> Vec<u8> {
     varint
 }
 
+#[test]
+#[rustfmt::skip]
+fn test_i32_to_varint() {
+    // cases from https://wiki.vg/Protocol#VarInt_and_VarLong
+
+    assert_eq!(convert_i32_to_varint( 0         ), vec![0x00                        ]);
+    assert_eq!(convert_i32_to_varint( 1         ), vec![0x01                        ]);
+    assert_eq!(convert_i32_to_varint( 2         ), vec![0x02                        ]);
+    assert_eq!(convert_i32_to_varint( 127       ), vec![0x7F                        ]);
+    assert_eq!(convert_i32_to_varint( 128       ), vec![0x80, 0x01                  ]);
+    assert_eq!(convert_i32_to_varint( 255       ), vec![0xFF, 0x01                  ]);
+    assert_eq!(convert_i32_to_varint( 25565     ), vec![0xDD, 0xC7, 0x01            ]);
+    assert_eq!(convert_i32_to_varint( 2097151   ), vec![0xFF, 0xFF, 0x7F            ]);
+    assert_eq!(convert_i32_to_varint( 2147483647), vec![0xFF, 0xFF, 0xFF, 0xFF, 0x07]);
+    assert_eq!(convert_i32_to_varint(-1         ), vec![0xFF, 0xFF, 0xFF, 0xFF, 0x0F]);
+    assert_eq!(convert_i32_to_varint(-2147483648), vec![0x80, 0x80, 0x80, 0x80, 0x08]);
+}
+
 fn convert_varint_to_i32(r: &mut impl std::io::Read) -> i32 {
     let mut i32 = 0;
 
@@ -48,6 +66,26 @@ fn convert_varint_to_i32(r: &mut impl std::io::Read) -> i32 {
     }
 
     i32
+}
+
+#[test]
+#[rustfmt::skip]
+fn test_varint_to_i32() {
+    // cases from https://wiki.vg/Protocol#VarInt_and_VarLong
+
+    use std::io::Cursor;
+
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0x00                        ])),  0         );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0x01                        ])),  1         );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0x02                        ])),  2         );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0x7F                        ])),  127       );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0x80, 0x01                  ])),  128       );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0xFF, 0x01                  ])),  255       );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0xDD, 0xC7, 0x01            ])),  25565     );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0xFF, 0xFF, 0x7F            ])),  2097151   );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0xFF, 0xFF, 0xFF, 0xFF, 0x07])),  2147483647);
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0xFF, 0xFF, 0xFF, 0xFF, 0x0F])), -1         );
+    assert_eq!(convert_varint_to_i32(&mut Cursor::new(vec![0x80, 0x80, 0x80, 0x80, 0x08])), -2147483648);
 }
 
 fn resolve_domain(host: &str) -> std::net::IpAddr {
