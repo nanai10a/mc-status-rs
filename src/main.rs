@@ -11,13 +11,14 @@ fn main() {
     dbg!(&res);
 }
 
-fn convert_i32_to_varint(mut n: i32) -> Vec<u8> {
+fn convert_i32_to_varint(n: i32) -> Vec<u8> {
+    let mut n = n as u32;
     let mut varint = Vec::with_capacity(5);
 
     for i in 0.. {
         assert!(i < 5);
 
-        if (n as u32) & 0xFFFFFF80 == 0 {
+        if n & 0xFFFFFF80 == 0 {
             varint.push(n as u8);
             break;
         }
