@@ -1,7 +1,8 @@
 #![feature(seek_stream_len)]
 
 fn main() {
-    let mut res = mcping("mc.hypixel.net").unwrap();
+    let arg = std::env::args().nth(1).unwrap();
+    let mut res = mcping(&arg).unwrap();
 
     // since it is hard to see, rewrite to vec indicating length
     if let Some(favicon) = res.favicon.as_mut() {
