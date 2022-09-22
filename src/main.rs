@@ -1,12 +1,19 @@
-fn main() {
-    let arg = std::env::args().nth(1).unwrap();
-    let mut res = mcping(&arg).unwrap();
+#![feature(iter_intersperse)]
 
-    // since it is hard to see, rewrite to vec indicating length
-    if let Some(favicon) = res.favicon.as_mut() {
-        favicon.0 = favicon.0.len().to_be_bytes().to_vec();
-    }
-    dbg!(&res);
+fn main() {
+    let args = Args::parse();
+
+    let res = process(&args.target).unwrap();
+
+    println!("{res}");
+}
+
+use clap::Parser;
+
+#[derive(Debug, Parser)]
+#[clap(version)]
+struct Args {
+    target: String,
 }
 
 fn convert_i32_to_varint(n: i32) -> Vec<u8> {
@@ -139,7 +146,7 @@ fn resolve_address(str: &str) -> std::net::SocketAddr {
     (ip, port).into()
 }
 
-fn mcping(target: &str) -> Result<Response, Error> {
+fn process(target: &str) -> Result<Response, Error> {
     let addr = resolve_address(target);
     let mut stream = std::net::TcpStream::connect(addr).unwrap();
     stream.set_nodelay(true).unwrap();
@@ -250,6 +257,210 @@ fn mcping(target: &str) -> Result<Response, Error> {
     stream.shutdown(std::net::Shutdown::Both).unwrap();
 
     Ok(res)
+}
+
+impl core::fmt::Display for Response {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        use colored::Colorize;
+
+        writeln!(f, "{}", self.description)?;
+        writeln!(f)?;
+
+        writeln!(
+            f,
+            "{} (protocol ver. {})",
+            self.version.name.cyan(),
+            self.version.protocol.to_string().magenta()
+        )?;
+
+        let players =
+            if self.players.sample.is_none() || self.players.sample.as_ref().unwrap().is_empty() {
+                "*nothing to show*".dimmed().to_string()
+            } else if self.players.sample.as_ref().unwrap().len() <= 3 {
+                self.players
+                    .sample
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .map(|s| s.name.as_str())
+                    .intersperse(", ")
+                    .collect::<String>()
+            } else {
+                let mut ps = self
+                    .players
+                    .sample
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .take(3)
+                    .map(|s| s.name.as_str())
+                    .intersperse(", ")
+                    .collect::<String>();
+                ps.push_str(", etc");
+
+                ps
+            };
+
+        writeln!(
+            f,
+            "{players} are participating now ({} / {} players)",
+            self.players.online, self.players.max
+        )?;
+
+        writeln!(f)?;
+
+        let fv = match self.favicon {
+            Some(_) => "found".green(),
+            None => "none".dimmed(),
+        };
+
+        let cp = match self.previews_chat {
+            Some(true) => "available".green(),
+            Some(false) => "unavailable".red(),
+            None => "unsupported".dimmed(),
+        };
+
+        let esc = match self.enforces_secure_chat {
+            Some(true) => "yes".green().to_string(),
+            Some(false) => "no".red().to_string(),
+            None => "unsupported".dimmed().to_string(),
+        };
+
+        writeln!(f, "  favicon             - {fv}")?;
+        writeln!(f, "  chat preview        - {cp}")?;
+        writeln!(f, "  enforce secure chat - {esc}")?;
+
+        writeln!(f)?;
+
+        write!(f, "  modding - ")?;
+        if let Some(mi) = &self.mod_info {
+            writeln!(f, "found")?;
+            writeln!(f, "  type    - {}", mi.ty)?;
+            writeln!(f, "  mods    - {} installed", mi.mod_list.len())
+        } else {
+            writeln!(f, "none")
+        }
+    }
+}
+
+impl core::fmt::Display for Chat {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Old(s) =>
+                if let Some((before, after)) = s.split_once('\n') {
+                    let (ord, delta) = {
+                        let esc = regex::Regex::new("§.").unwrap();
+
+                        let before = esc.replace_all(before, "");
+                        let after = esc.replace_all(after, "");
+
+                        let ord = before.len().cmp(&after.len());
+                        let delta = (before.len() as isize - after.len() as isize).abs() as usize;
+
+                        (ord, delta)
+                    };
+
+                    let pad = " ".repeat(delta / 2);
+
+                    use core::cmp::Ordering::*;
+                    match ord {
+                        Less => {
+                            writeln!(f, "{}", format_old_text(before.to_string()))?;
+                            write!(f, "{pad}{}{pad}", format_old_text(after.to_string()))
+                        },
+
+                        Equal => {
+                            writeln!(f, "{}", format_old_text(before.to_string()))?;
+                            write!(f, "{}", format_old_text(after.to_string()))
+                        },
+                        Greater => {
+                            writeln!(f, "{pad}{}{pad}", format_old_text(before.to_string()))?;
+                            write!(f, "{}", format_old_text(after.to_string()))
+                        },
+                    }
+                } else {
+                    write!(f, "{}", format_old_text(s.to_string()))
+                },
+            Self::New { extra, text } => {
+                if extra.is_none() && text.find('§').is_some() {
+                    return Self::Old(text.to_string()).fmt(f);
+                }
+
+                todo!()
+            },
+        }
+    }
+}
+
+fn format_old_text(mut s: String) -> String {
+    let mut buf = termcolor::Buffer::ansi();
+
+    use std::io::Write;
+
+    use termcolor::{ColorSpec, WriteColor};
+
+    macro_rules! color {
+        (color $fg:expr) => {{
+            let mut c = ColorSpec::new();
+            c.set_fg(Some($fg.parse().unwrap()));
+            c
+        }};
+        (style $style:ident) => {{
+            let mut c = ColorSpec::new();
+            c.$style(true);
+            c
+        }};
+    }
+
+    loop {
+        if let Some((before, after)) = s.split_once('§') {
+            buf.write_all(before.as_bytes()).unwrap();
+
+            let code = after.chars().next().unwrap();
+            let color = match code {
+                '0' => color!(color "0x00,0x00,0x00"),
+                '1' => color!(color "0x00,0x00,0xaa"),
+                '2' => color!(color "0x00,0xaa,0x00"),
+                '3' => color!(color "0x00,0xaa,0xaa"),
+                '4' => color!(color "0xaa,0x00,0x00"),
+                '5' => color!(color "0xaa,0x00,0xaa"),
+                '6' => color!(color "0xff,0xaa,0x00"),
+                '7' => color!(color "0xaa,0xaa,0xaa"),
+                '8' => color!(color "0x55,0x55,0x55"),
+                '9' => color!(color "0x55,0x55,0xff"),
+                'a' => color!(color "0x55,0xff,0x55"),
+                'b' => color!(color "0x55,0xff,0xff"),
+                'c' => color!(color "0xff,0x55,0x55"),
+                'd' => color!(color "0xff,0x55,0xff"),
+                'e' => color!(color "0xff,0xff,0x55"),
+                'f' => color!(color "0xff,0xff,0xff"),
+
+                'k' => unimplemented!("unable support this style"),
+                'l' => color!(style set_bold),
+                'm' => {
+                    use colored::Colorize;
+                    s = after[1..].strikethrough().to_string();
+                    continue;
+                },
+                'n' => color!(style set_underline),
+                'o' => color!(style set_italic),
+                'r' => color!(style set_reset),
+
+                c => unreachable!("invalid charactor '{c}'"),
+            };
+
+            buf.set_color(&color).unwrap();
+
+            s = after[1..].to_string();
+        } else {
+            buf.write_all(s.as_bytes()).unwrap();
+            break;
+        }
+    }
+
+    buf.set_color(&color!(style set_reset)).unwrap();
+
+    core::str::from_utf8(buf.as_slice()).unwrap().to_string()
 }
 
 use serde::Deserialize;
