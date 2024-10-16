@@ -519,7 +519,15 @@ struct ModInfo {
     #[serde(rename = "type")]
     ty: String,
     #[serde(rename = "modList")]
-    mod_list: Vec<String>, // FIXME: unknown element
+    mod_list: Vec<ModListItem>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ModListItem {
+    #[serde(rename = "modid")]
+    mod_id: String,
+    #[serde(rename = "version")]
+    version: String,
 }
 
 #[derive(Debug)]
